@@ -3,80 +3,88 @@ package percolation;
 
 
 public class Percolation {
-    
-    WeightedQuickUnionUF uf;
-    int[][] grid;
+    private static final int TOP = 0;
+    private final WeightedQuickUnionUF uf;
     private final int size;
+    private final int bottom;
+    private final boolean[][] openNodes;
+    private int openSites;
     
 
     // creates n-by-n grid, with all sites initially blocked
     public Percolation(int n) {
-        this.size = n;
-        uf = new WeightedQuickUnionUF((int)Math.pow(n, 2) + 2); //0 -> head, n+1 -> tail
-        this.grid = new int[n][n];
-        for (int row = 0; row <n; row++) {
-            for (int col = 0; col <n; col++) {
-                grid[row][col] = 0; //setting 0 for the closed sites
-            } 
+        if (n <= 0) {
+            throw new IllegalArgumentException();
         }
+        this.size = n;
+        bottom = n * n + 1;
+        uf = new WeightedQuickUnionUF(n * n + 2);
+        openNodes = new boolean[n][n];
+        openSites = 0;
     }
     
-    public int getId(int row, int col) { //elements indexed from 1 to n
-        return (row-1)*size+col;
+    private int getId(int row, int col) { //elements indexed from 1 to n
+        if (!isValid(row, col)) 
+            throw new IllegalArgumentException();
+        return size * (row - 1) + col;
+    }
+    
+    // checks whether the passed indexes are valid
+    private boolean isValid(int i, int j) {
+        return i > 0 && j > 0 && i <= size && j <= size;
     }
 
     // opens the site (row, col) if it is not open already
     public void open(int row, int col) {
-        grid[row-1][col-1] = 1;
-            if (isOpen(row-1, col) == true)
-                uf.union(getId(row, col), getId(row-1, col));
-            if (isOpen(row+1, col) == true)
-                uf.union(getId(row, col), getId(row+1, col));
-            if (isOpen(row, col-1) == true)
-                uf.union(getId(row, col), getId(row, col-1));
-            if (isOpen(row, col+1) == true)
-                uf.union(getId(row, col), getId(row, col+1));
+        if (!isValid(row, col)) 
+            throw new IllegalArgumentException();
+        openNodes[row - 1][col - 1] = true;
+        ++openSites;
+        if (row == 1) {
+            uf.union(getId(row, col), TOP);
+        }
+        if (row == size) {
+            uf.union(getId(row, col), bottom);
+        }
+        if (isValid(row-1, col) && isOpen(row-1, col))
+            uf.union(getId(row, col), getId(row-1, col));
+        if (isValid(row+1, col) && isOpen(row+1, col))
+            uf.union(getId(row, col), getId(row+1, col));
+        if (isValid(row, col-1) && isOpen(row, col-1))
+            uf.union(getId(row, col), getId(row, col-1));
+        if (isValid(row, col+1) && isOpen(row, col+1))
+            uf.union(getId(row, col), getId(row, col+1));
         
     }
 
     // is the site (row, col) open?
     public boolean isOpen(int row, int col) {
-        if (row-1 <0 || col-1 <0 || row >= size || col >= size) 
-            return false;
-        else if (grid[row-1][col-1] == 1) 
-            return true;
-        return false;
+        if (!isValid(row, col)) 
+            throw new IllegalArgumentException();
+        return openNodes[row - 1][col - 1];
     }
 
     // is the site (row, col) full?
-    //public boolean isFull(int row, int col) {
-    //    
-    //}
+    public boolean isFull(int row, int col) {
+         if (isValid(row, col)) {
+            return uf.find(TOP) == uf.find(getId(row, col));
+        } else throw new IllegalArgumentException();
+    }
 
-    // returns the number of open sitess
+    // returns the number of open sites
     public int numberOfOpenSites() {
-        int count = 0;
-        for (int row = 1; row <= size; row++) {
-            for (int col = 1; col <= size; col++) {
-                if (isOpen(row, col))
-                    count++;      
-            }         
-        }
-        return count;
+        return openSites;
     }
 
     // does the system percolate?
     public boolean percolates() {
-        int head = 0;
-        int tail = (int)Math.pow(size, 2) + 1;
-        for (int i=1; i<=size; i++) {
-            uf.union(getId(1, i), head);
-            uf.union(getId(size, i), tail);
-        }
-        return uf.connected(head, tail);
+        return uf.find(TOP) ==  uf.find(bottom);
     }
     
     public static void main(String[] args) {
+        Percolation p = new Percolation(3);
+        p.open(1, 3);
+        System.out.println(p.percolates());
     }
     
 }
